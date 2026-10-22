@@ -1,0 +1,42 @@
+# Builds docker/base/php-grpc.Dockerfile for linux/amd64 (Railway) and publishes it to
+# ghcr.io/interconnected-pty-ltd/php-grpc:<php version>-fpm. Run by hand: Actions -> "PHP gRPC base image" -> Run.
+# The first time, make the package public: GitHub -> organisation -> Packages -> php-grpc -> Package settings ->
+# Change visibility -> Public (Railway pulls it without credentials; it holds nothing secret).
+name: PHP gRPC base image
+
+on:
+  workflow_dispatch:
+    inputs:
+      php_version:
+        description: "PHP version (patched release)"
+        required: true
+        default: "8.5.12"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: docker/base
+          file: docker/base/php-grpc.Dockerfile
+          platforms: linux/amd64
+          build-args: PHP_VERSION=${{ inputs.php_version }}
+          push: true
+          tags: |
+            ghcr.io/interconnected-pty-ltd/php-grpc:${{ inputs.php_version }}-fpm
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.description=php:${{ inputs.php_version }}-fpm with grpc and protobuf (USPP base)
